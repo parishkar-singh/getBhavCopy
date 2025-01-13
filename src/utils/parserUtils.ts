@@ -1,3 +1,4 @@
+// @ts-ignore
 import Papa from 'papaparse';
 import JSZip from 'jszip';
 
@@ -5,7 +6,7 @@ interface CSVRow {
     [key: string]: string;
 }
 
-const fixedColumns = ['SC_CODE', 'DATE', 'OPEN', 'HIGH', 'LOW', 'CLOSE', 'NET_TURNOVER'];
+const fixedColumns = ['SC_CODE', 'DATE', 'OPEN', 'HIGH', 'LOW', 'CLOSE', 'NET_TURNOV'];
 
 /**
  * Parses a CSV file and returns the corresponding `.txt` file content.
@@ -19,18 +20,18 @@ export const parseCSVFile = async (file: File): Promise<{ fileName: string; cont
             Papa.parse<CSVRow>(reader.result as string, {
                 header: true,
                 skipEmptyLines: true,
-                complete: (result) => {
+                complete: (result: { data: any[]; }) => {
                     const content = result.data
                         .map((row) =>
                             fixedColumns
                                 .map((col) => (col === 'DATE' ? fileName : row[col] || ''))
-                                .join('\t')
+                                .join(',')
                         )
                         .join('\n');
 
                     resolve({ fileName: `${fileName}.txt`, content });
                 },
-                error: (error) => reject(error),
+                error: (error: any) => reject(error),
             });
         };
 

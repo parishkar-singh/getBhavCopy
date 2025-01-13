@@ -6,6 +6,7 @@ const preloadedState = loadState();
 
 const store = configureStore({
     reducer: {
+        // @ts-ignore
         selectedItems: selectedItemsReducer,
     },
     preloadedState,

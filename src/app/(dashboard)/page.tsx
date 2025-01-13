@@ -6,6 +6,7 @@ import OptionsBar from "@/app/(dashboard)/_components/OptionsBar";
 import { useDispatch, useSelector } from 'react-redux';
 import {AppDispatch, RootState} from "@/redux/store";
 import {addItem, removeItem} from "@/redux/selectedItemsSlice";
+import {Button} from "react-day-picker";
 
 
 const Dashboard: React.FC = () => {
@@ -21,10 +22,15 @@ const Dashboard: React.FC = () => {
         dispatch(removeItem(item));
         console.log(`${item} removed from download queue.`);
     };
+    const handleRouteToParser = () => {
+        window.location.href = "/parser";
+    };
 
     return (
         <div className="flex flex-col gap-10">
-            <h1 className="text-white text-center text-3xl  font-black">BhavCopy Downloader</h1>
+
+            <h1 className="text-white text-center text-3xl  font-black">BhavCopy Downloader <button  onClick={handleRouteToParser} className={`bg-green-500 rounded-3xl px-2`}>Parser</button></h1>
+            <button>PARSER</button>
             <div className={`w-full flex justify-between gap-10`}>
                 <div className="w-1/2 grid grid-cols-2 gap-4">
                     <SelectorCard
