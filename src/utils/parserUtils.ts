@@ -1,53 +1,55 @@
+import JSZip from 'jszip';
 // @ts-ignore
 import Papa from 'papaparse';
-import JSZip from 'jszip';
 
-interface CSVRow {
-    [key: string]: string;
-}
-
-const fixedColumns = ['SC_CODE', 'DATE', 'OPEN', 'HIGH', 'LOW', 'CLOSE', 'NET_TURNOV'];
+const columnMapping = new Map<string, { columns: string[]; folder: string }>([
+    ['nse', { columns: ['SYMBOL', 'DATE', 'OPEN', 'HIGH', 'LOW', 'CLOSE', 'TOTTRDVAL'], folder: 'NSEBSE' }],
+    ['bse', { columns: ['SC_CODE', 'DATE', 'OPEN', 'HIGH', 'LOW', 'CLOSE', 'NET_TURNOV'], folder: 'NSEBSE' }],
+    ['nsefo', { columns: ['SYMBOL', 'EXPIRY_DT', 'STRIKE_PR', 'OPTION_TYP', 'OPEN', 'HIGH', 'LOW', 'CLOSE', 'OPEN_INT'], folder: 'NSEEFO' }],
+]);
 
 /**
- * Parses a CSV file and returns the corresponding `.txt` file content.
+ * Processes a single file by parsing its content and creating a TXT representation.
  */
-export const parseCSVFile = async (file: File): Promise<{ fileName: string; content: string }> => {
-    return new Promise((resolve, reject) => {
-        const fileName = file.name.split("_")[0];
-        const reader = new FileReader();
+export const processFile = async (file: File, selectedFileType: string): Promise<{ folder: string; fileName: string; content: string }> => {
+    const fileType = selectedFileType || file.name.split('_')[1]?.split('.')[0]?.toLowerCase();
+    const mapping = columnMapping.get(fileType);
 
-        reader.onload = () => {
-            Papa.parse<CSVRow>(reader.result as string, {
-                header: true,
-                skipEmptyLines: true,
-                complete: (result: { data: any[]; }) => {
-                    const content = result.data
-                        .map((row) =>
-                            fixedColumns
-                                .map((col) => (col === 'DATE' ? fileName : row[col] || ''))
-                                .join(',')
-                        )
-                        .join('\n');
+    if (!mapping) {
+        throw new Error(`Invalid file type: ${fileType}`);
+    }
 
-                    resolve({ fileName: `${fileName}.txt`, content });
-                },
-                error: (error: any) => reject(error),
-            });
-        };
+    const { columns, folder } = mapping;
+    const fileContent = await file.text();
+    const rows = Papa.parse(fileContent, { header: true, skipEmptyLines: true }).data;
 
-        reader.onerror = (error) => reject(error);
-        reader.readAsText(file);
-    });
+    const content = rows
+        .map((row: any) => columns.map((col) => (col === 'DATE' ? file.name.split('_')[0] : row[col] || '')).join(','))
+        .join('\n');
+
+    return {
+        folder,
+        fileName: `${file.name.split('_')[0]}_${fileType}.txt`,
+        content,
+    };
 };
 
 /**
- * Zips multiple files and returns a Blob for download.
+ * Processes multiple files and organizes them into a zip structure.
  */
-export const createZip = async (files: { fileName: string; content: string }[]): Promise<Blob> => {
+export const processFilesAndCreateZip = async (files: File[], selectedFileType: string): Promise<Blob> => {
     const zip = new JSZip();
-    files.forEach(({ fileName, content }) => {
-        zip.file(fileName, content);
-    });
+    const folders = new Map<string, JSZip>();
+
+    for (const file of files) {
+        const { folder, fileName, content } = await processFile(file, selectedFileType);
+
+        if (!folders.has(folder)) {
+            folders.set(folder, zip.folder(folder)!);
+        }
+
+        folders.get(folder)!.file(fileName, content);
+    }
 
     return zip.generateAsync({ type: 'blob' });
 };
